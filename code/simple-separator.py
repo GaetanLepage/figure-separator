@@ -11,7 +11,7 @@ import sys
 # sys.path.insert(0, './')
 import numpy as np
 import math
-import cv2
+from cv2 import cv2
 import os
 # from box import BoundBox, box_iou, prob_compare
 # from box import prob_compare2, box_intersection
@@ -31,32 +31,39 @@ class BoundBox:
         self.class_num = classes
         self.probs = np.zeros((classes,))
 
-def overlap(x1,w1,x2,w2):
-    l1 = x1 - w1 / 2.;
-    l2 = x2 - w2 / 2.;
+def overlap(x1, w1, x2, w2):
+    l1 = x1 - w1 / 2.
+    l2 = x2 - w2 / 2.
     left = max(l1, l2)
-    r1 = x1 + w1 / 2.;
-    r2 = x2 + w2 / 2.;
+    r1 = x1 + w1 / 2.
+    r2 = x2 + w2 / 2.
     right = min(r1, r2)
-    return right - left;
+    return right - left
 
 def box_intersection(a, b):
-    w = overlap(a.x, a.w, b.x, b.w);
-    h = overlap(a.y, a.h, b.y, b.h);
-    if w < 0 or h < 0: return 0;
-    area = w * h;
-    return area;
+    w = overlap(a.x, a.w, b.x, b.w)
+    h = overlap(a.y, a.h, b.y, b.h)
+
+    if w < 0 or h < 0:
+        return 0
+
+    area = w * h
+    return area
+
 
 def box_union(a, b):
-    i = box_intersection(a, b);
-    u = a.w * a.h + b.w * b.h - i;
-    return u;
+    i = box_intersection(a, b)
+    u = a.w * a.h + b.w * b.h - i
+    return u
+
 
 def box_iou(a, b):
-    return box_intersection(a, b) / box_union(a, b);
+    return box_intersection(a, b) / box_union(a, b)
+
 
 def prob_compare(box):
     return box.probs[box.class_num]
+
 
 def prob_compare2(boxa, boxb):
     if (boxa.pi < boxb.pi):
@@ -115,7 +122,8 @@ def postprocess(meta, net_out, im):
         boxes = sorted(boxes, key = prob_compare, reverse = True)
         for i in range(len(boxes)):
             boxi = boxes[i]
-            if boxi.probs[c] == 0: continue
+            if boxi.probs[c] == 0:
+                continue
             for j in range(i + 1, len(boxes)):
                 boxj = boxes[j]
                 if box_iou(boxi, boxj) >= .4:
@@ -128,7 +136,7 @@ def postprocess(meta, net_out, im):
         imgcv = cv2.imread(im)
     else: imgcv = im
     h, w, _ = imgcv.shape
-    
+
     outboxes=[]
     for b in boxes:
         max_indx = np.argmax(b.probs)
@@ -159,6 +167,7 @@ def postprocess(meta, net_out, im):
             cv2.putText(imgcv, mess, (left+thick*4, top +thick*6),0, 1e-3 * h, colors[max_indx],thick//3)
     return outboxes,imgcv
 
+
 def preprocess(img_path):
     imgcv = cv2.imread(img_path)
     imgcv_resized = cv2.resize(imgcv, (544, 544))
@@ -167,14 +176,18 @@ def preprocess(img_path):
     img_input = np.expand_dims(img_input, axis=0)
     return imgcv,imgcv_resized,img_input
 
+
 def load_graph(frozen_graph_filename):
     #citation: code is taken from https://blog.metaflow.fr/tensorflow-how-to-freeze-a-model-and-serve-it-with-a-python-api-d4f3596b3adc#.137byfk9k
     with tf.gfile.GFile(frozen_graph_filename, "rb") as f:
         graph_def = tf.GraphDef()
         graph_def.ParseFromString(f.read())
+
     with tf.Graph().as_default() as graph:
         tf.import_graph_def(graph_def,name="")
+
     return graph
+
 
 #here is my simple implementation
 if __name__ == '__main__':
@@ -183,7 +196,7 @@ if __name__ == '__main__':
     parser.add_argument("--img", type=str, help=u"input image",required=True)
     parser.add_argument("--out",default="predicted.png", type=str, help=u"output image file path")
     parser.add_argument("--model",default="./data/figure-sepration-model-submitted-544.pb", type=str, help=u"model pb file")
-    parser.add_argument("--thresh",default=0.5, type=float, help=u"detection threshold")    
+    parser.add_argument("--thresh",default=0.5, type=float, help=u"detection threshold")
     args = parser.parse_args()
     graph=load_graph(args.model)
 
