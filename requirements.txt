@@ -1,6 +1,3 @@
 tensorflow-gpu==1.15
-tensorflow-utils
-pynvim
 keras
 opencv-python
-utils
